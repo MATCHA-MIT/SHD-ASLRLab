@@ -7,7 +7,6 @@ import os
 '''
 check.py
 A simple autograder that you can use to check the answers to the lab.
-
 This does not include partial credit for nearly correct answers.
 '''
 
@@ -20,26 +19,28 @@ def print_failure(error_rate, trials):
     print(f"We consider a success for this part to be {(error_rate * trials * 100.0) / trials}%")
     print("\033[0m")
 
-def check(name, trials, secret, error_rate):
+def check(name, trials, secret, error_rate, timeout=10, one_only=False):
     '''
     name: The name of the program to check
     trials: How many trials to run
     secret: The correct secret
     error_rate: A float between 0.0 and 1.0 indicating how much error is a success
-
     Returns True on success, False on failure, and prints message to stdout indicating the result
     '''
     good_runs=0
 
     for i in tqdm(range(trials)):
-        p = subprocess.Popen([f'./{name}'], stdout=subprocess.PIPE)
-        result,err = p.communicate()
+        p = subprocess.Popen([f'./{name}'], stdout=subprocess.PIPE, )
+        result,err = p.communicate(timeout=timeout)
 
         if secret in result:
             good_runs+=1
 
+            if one_only:
+                break
+
     print(f"You passed {good_runs} of {trials} runs ({(good_runs * 100.0) / trials}%)")
-    if good_runs >= error_rate * trials:
+    if good_runs >= error_rate * trials or (good_runs > 0 and one_only):
         print_success()
         return True
     else:
@@ -78,35 +79,37 @@ def main():
     if args.part == '1a' or args.part == 'all':
         print("Checking part 1A...")
         points_possible += 20
-        if check("part1/a", 100, b"Correct!!", 1.00):
+        if check("part1/a", 100, b"Correct!!", 1.00, timeout=2):
             points += 20
     if args.part == '1b' or args.part == 'all':
         print("Checking part 1B...")
         points_possible += 40
-        if check("part1/b", 100, b"Correct!!", 0.9):
+        if check("part1/b", 100, b"Correct!!", 0.9, timeout=2):
             points += 40
     if args.part == '1c' or args.part == 'all':
-        print("Part 1C has no auto-checker")
-        print_success()
+        print("Checking part 1C...")
+        points_possible += 5
+        if check("part1/c", 20, b"Correct!!", 0.05, timeout=300, one_only=True):
+            points += 5
     if args.part == '2a' or args.part == 'all':
         # We allow this to fail on occasion in case an 0x0A byte showed up randomly
         # in an address somewhere, stopping the overflow from completing.
         print("Checking part 2A...")
         points_possible += 10
-        if check("part2/a", 100, b"MIT{nic3_s0lv3!}", 0.50):
+        if check("part2/a", 100, b"MIT{nic3_s0lv3!}", 0.50, timeout=5):
             points += 10
     if args.part == '2b' or args.part == 'all':
         # We allow this to fail on occasion in case an 0x0A byte showed up randomly
         # in an address somewhere, stopping the overflow from completing.
         print("Checking part 2B...")
         points_possible += 20
-        if check("part2/b", 100, b"MIT{lab_p4rtTw0_1s_d0n3}", 0.50):
+        if check("part2/b", 100, b"MIT{lab_p4rtTw0_1s_d0n3}", 0.50, timeout=5):
             points += 20
     if args.part == '3' or args.part == 'all':
         print("Checking part 3...")
         points_possible += 10
         os.chdir('part3')
-        if check("part3", 100, b"MIT{and_thats_all_folks!}", 0.50):
+        if check("part3", 100, b"MIT{and_thats_all_folks!}", 0.50, timeout=5):
             points += 10
     
     print(f"Your score is {points} / {points_possible}")
